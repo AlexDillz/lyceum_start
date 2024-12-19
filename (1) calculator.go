@@ -37,16 +37,17 @@ func ApplyOperator(a, b float64, operator byte) (float64, error) {
 		return a * b, nil
 	case '/':
 		if b == 0 {
-			return 0, errors.New("zero")
+			return 0, errors.New("division by zero")
 		}
 		return a / b, nil
 	}
-	return 0, errors.New("inv operator")
+	return 0, errors.New("invalid operator")
 }
 
 func Calc(expression string) (float64, error) {
 	var numStack []float64
 	var opStack []byte
+	parenthesesBalance := 0 // Счетчик для проверки вложенности скобок
 
 	i := 0
 	for i < len(expression) {
@@ -65,7 +66,7 @@ func Calc(expression string) (float64, error) {
 			}
 			num, err := strconv.ParseFloat(expression[numStart:i], 64)
 			if err != nil {
-				return 0, fmt.Errorf("inv num: %v", err)
+				return 0, fmt.Errorf("invalid number: %v", err)
 			}
 			numStack = append(numStack, num)
 			continue
@@ -74,7 +75,7 @@ func Calc(expression string) (float64, error) {
 		if Operator(char) {
 			for len(opStack) > 0 && Priority(opStack[len(opStack)-1]) >= Priority(char) {
 				if len(numStack) < 2 {
-					return 0, errors.New("inv expression")
+					return 0, errors.New("invalid expression")
 				}
 				b := numStack[len(numStack)-1]
 				a := numStack[len(numStack)-2]
@@ -92,8 +93,13 @@ func Calc(expression string) (float64, error) {
 		}
 
 		if char == '(' {
+			parenthesesBalance++
 			opStack = append(opStack, char)
 		} else if char == ')' {
+			parenthesesBalance--
+			if parenthesesBalance < 0 {
+				return 0, errors.New("mismatched parentheses")
+			}
 			for len(opStack) > 0 && opStack[len(opStack)-1] != '(' {
 				if len(numStack) < 2 {
 					return 0, errors.New("invalid expression")
@@ -116,9 +122,13 @@ func Calc(expression string) (float64, error) {
 		i++
 	}
 
+	if parenthesesBalance != 0 {
+		return 0, errors.New("mismatched parentheses")
+	}
+
 	for len(opStack) > 0 {
 		if len(numStack) < 2 {
-			return 0, errors.New("inv expression")
+			return 0, errors.New("invalid expression")
 		}
 		b := numStack[len(numStack)-1]
 		a := numStack[len(numStack)-2]
@@ -132,8 +142,5 @@ func Calc(expression string) (float64, error) {
 	}
 
 	if len(numStack) != 1 {
-		return 0, errors.New("inv expression")
+		return 0, errors.New("invalid expression")
 	}
-
-	return numStack[0], nil
-}
